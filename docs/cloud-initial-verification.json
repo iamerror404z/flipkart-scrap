@@ -1,0 +1,230 @@
+[
+  {
+    "endpoint": "/api/v1/products/check",
+    "request": {
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP",
+      "pincode": "638003"
+    },
+    "seconds": 22.3,
+    "curlExitCode": 0,
+    "response": {
+      "success": true,
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP",
+      "pincode": "638003",
+      "product": {
+        "name": "POCO X7 Pro 5G (Yellow, 256 GB)",
+        "price": 23999.0,
+        "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/m/l/q/-resized-original-imahe3952pkacby5.jpeg?q=70",
+        "productId": "MOBH7YZ9J6QGZZEQ"
+      },
+      "availability": {
+        "isStock": true,
+        "isDeliverable": false,
+        "stockStatus": "IN_STOCK",
+        "deliveryStatus": "NOT_DELIVERABLE",
+        "deliveryMessage": "Not deliverable at your location",
+        "estimatedDelivery": null
+      },
+      "metadata": {
+        "source": "flipkart",
+        "checkedAt": "2026-11-11T15:22:35Z"
+      },
+      "error": null
+    }
+  },
+  {
+    "endpoint": "/api/v1/products/check",
+    "request": {
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6",
+      "pincode": "638003"
+    },
+    "seconds": 27.77,
+    "curlExitCode": 0,
+    "response": {
+      "success": false,
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6",
+      "pincode": "638003",
+      "product": null,
+      "availability": null,
+      "metadata": null,
+      "error": {
+        "code": "TIMEOUT",
+        "message": "Timed out while confirming delivery for PIN 638003."
+      }
+    }
+  },
+  {
+    "endpoint": "/api/v1/products/check",
+    "request": {
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP",
+      "pincode": "110001"
+    },
+    "seconds": 20.76,
+    "curlExitCode": 0,
+    "response": {
+      "success": true,
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP",
+      "pincode": "110001",
+      "product": {
+        "name": "POCO X7 Pro 5G (Yellow, 256 GB)",
+        "price": 23999.0,
+        "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/m/l/q/-resized-original-imahe3952pkacby5.jpeg?q=70",
+        "productId": "MOBH7YZ9J6QGZZEQ"
+      },
+      "availability": {
+        "isStock": true,
+        "isDeliverable": false,
+        "stockStatus": "IN_STOCK",
+        "deliveryStatus": "NOT_DELIVERABLE",
+        "deliveryMessage": "Not deliverable at your location",
+        "estimatedDelivery": null
+      },
+      "metadata": {
+        "source": "flipkart",
+        "checkedAt": "2026-11-11T15:23:25Z"
+      },
+      "error": null
+    }
+  },
+  {
+    "endpoint": "/api/v1/products/check",
+    "request": {
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6",
+      "pincode": "110001"
+    },
+    "seconds": 22.31,
+    "curlExitCode": 0,
+    "response": {
+      "success": true,
+      "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6",
+      "pincode": "110001",
+      "product": {
+        "name": "POCO X7 Pro 5G (Nebula Green, 256 GB)",
+        "price": 23999.0,
+        "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/v/y/j/-resized-original-imahe395ksjsqk4n.jpeg?q=70",
+        "productId": "MOBH7YZ94697Z9D6"
+      },
+      "availability": {
+        "isStock": true,
+        "isDeliverable": false,
+        "stockStatus": "IN_STOCK",
+        "deliveryStatus": "NOT_DELIVERABLE",
+        "deliveryMessage": "Not deliverable at your location",
+        "estimatedDelivery": null
+      },
+      "metadata": {
+        "source": "flipkart",
+        "checkedAt": "2026-11-11T15:23:46Z"
+      },
+      "error": null
+    }
+  },
+  {
+    "endpoint": "/api/v1/products/batch-check",
+    "request": {
+      "pincode": "638003",
+      "products": [
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP"
+        },
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6"
+        }
+      ]
+    },
+    "seconds": 21.67,
+    "curlExitCode": 0,
+    "response": {
+      "success": true,
+      "pincode": "638003",
+      "totalProducts": 2,
+      "results": [
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP",
+          "product": {
+            "name": "POCO X7 Pro 5G (Yellow, 256 GB)",
+            "price": 23999.0,
+            "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/m/l/q/-resized-original-imahe3952pkacby5.jpeg?q=70",
+            "productId": "MOBH7YZ9J6QGZZEQ"
+          },
+          "isStock": true,
+          "isDeliverable": false,
+          "stockStatus": "IN_STOCK",
+          "deliveryStatus": "NOT_DELIVERABLE",
+          "deliveryMessage": "Not deliverable at your location",
+          "estimatedDelivery": null,
+          "error": null
+        },
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6",
+          "product": {
+            "name": "POCO X7 Pro 5G (Nebula Green, 256 GB)",
+            "price": 23999.0,
+            "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/v/y/j/-resized-original-imahe395ksjsqk4n.jpeg?q=70",
+            "productId": "MOBH7YZ94697Z9D6"
+          },
+          "isStock": true,
+          "isDeliverable": false,
+          "stockStatus": "IN_STOCK",
+          "deliveryStatus": "NOT_DELIVERABLE",
+          "deliveryMessage": "Not deliverable at your location",
+          "estimatedDelivery": null,
+          "error": null
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "/api/v1/products/batch-check",
+    "request": {
+      "pincode": "110001",
+      "products": [
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP"
+        },
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6"
+        }
+      ]
+    },
+    "seconds": 29.47,
+    "curlExitCode": 0,
+    "response": {
+      "success": false,
+      "pincode": "110001",
+      "totalProducts": 2,
+      "results": [
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-yellow-256-gb/p/itm0a066ed95064a?pid=MOBH7YZ9J6QGZZEQ&lid=LSTMOBH7YZ9J6QGZZEQCBSSSP",
+          "product": {
+            "name": "POCO X7 Pro 5G (Yellow, 256 GB)",
+            "price": 23999.0,
+            "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/m/l/q/-resized-original-imahe3952pkacby5.jpeg?q=70",
+            "productId": "MOBH7YZ9J6QGZZEQ"
+          },
+          "isStock": true,
+          "isDeliverable": false,
+          "stockStatus": "IN_STOCK",
+          "deliveryStatus": "NOT_DELIVERABLE",
+          "deliveryMessage": "Not deliverable at your location",
+          "estimatedDelivery": null,
+          "error": null
+        },
+        {
+          "productUrl": "https://www.flipkart.com/poco-x7-pro-5g-nebula-green-256-gb/p/itm8f21ab157cc72?pid=MOBH7YZ94697Z9D6",
+          "product": null,
+          "isStock": null,
+          "isDeliverable": null,
+          "stockStatus": "UNKNOWN",
+          "deliveryStatus": "UNKNOWN",
+          "deliveryMessage": null,
+          "estimatedDelivery": null,
+          "error": {
+            "code": "TIMEOUT",
+            "message": "Timed out while confirming delivery for PIN 110001."
+          }
+        }
+      ]
+    }
+  }
+]
