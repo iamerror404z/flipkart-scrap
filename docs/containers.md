@@ -47,7 +47,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-The container is available at `http://127.0.0.1:8001/docs`; the existing
+The container is available at `http://127.0.0.1:8081/docs`; the existing
 Python server on port `8000` can stay running. Use `HOST_PORT` to change the
 published port. Compose configures a 2 GiB memory limit, a 1 GiB shared-memory
 segment, an init process, and graceful shutdown.
@@ -63,7 +63,7 @@ curl http://127.0.0.1:8001/health
 Keep `PLAYWRIGHT_HEADLESS=true`: this image packages headless Chromium.
 Scraping requires outbound HTTPS to Flipkart and the address lookup services
 used by its frontend. Delivery checks typically take tens of seconds, so
-configure the cloud proxy's request timeout to at least 180 seconds and allow
+configure the cloud proxy's request timeout to at least 300 seconds and allow
 additional time for larger batches.
 
 ## Private Docker Hub repository
