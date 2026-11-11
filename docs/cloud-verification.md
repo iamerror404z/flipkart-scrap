@@ -117,3 +117,23 @@ No proxy was supplied or needed in these tests. Actual operation through a
 residential proxy has not been verified. If access becomes persistently
 blocked, supply an Indian residential/ISP proxy using the documented env
 variables; CAPTCHA and unsolved upstream failures remain explicit errors.
+
+### Sequential scraping update
+
+At the user's request, the complete HTTP + browser product flow now shares
+one process-wide lock across single checks and batches. Browser and batch
+concurrency are restricted to 1, and both Docker and systemd run one worker.
+Queued requests remain asynchronous, so `/health` stays responsive.
+
+The rebuilt `flipkart-scraper:cloud` image is
+`sha256:4b222ab263abccaf99d03943fd4d699c7939d670b07e3a5bdc4cda7db9d1bb48`.
+All 97 tests passed (1 network test skipped), including overlapping single
+and batch API requests with peak active product flows of exactly 1. The
+packaged Chromium smoke check passed again. Two simultaneous real curl
+requests for the supplied product completed in 24.64 and 45.30 seconds;
+container logs showed the second HTTP fetch began after the first check
+finished. Both returned verified negative delivery results without a null
+`isDeliverable`; responses are in
+[cloud-serial-verification.json](cloud-serial-verification.json).
+The temporary test container was removed. The systemd API on port 8081 was
+restarted with the same sequential settings and passed its health check.

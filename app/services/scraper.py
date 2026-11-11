@@ -37,6 +37,8 @@ from app.utils.parser import (
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+# Shared by single checks and every batch: queue the entire HTTP + browser flow.
+_scrape_lock = asyncio.Lock()
 
 # ---------------------------------------------------------------------------
 # Common HTTP headers to reduce bot-detection false positives
@@ -79,6 +81,12 @@ class ScraperResult:
 # ---------------------------------------------------------------------------
 
 async def scrape_product(product_url: str, pincode: str) -> ScraperResult:
+    """Process one product at a time across all requests in this worker."""
+    async with _scrape_lock:
+        return await _scrape_product_once(product_url, pincode)
+
+
+async def _scrape_product_once(product_url: str, pincode: str) -> ScraperResult:
     """
     Main entry point.  Returns a ScraperResult regardless of outcome.
     Never raises; errors are encoded in ScraperResult.

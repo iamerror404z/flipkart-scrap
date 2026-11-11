@@ -59,7 +59,7 @@ scraper.py (ScraperService)
           └── Extract information only from the delivery section
 ```
 
-The service uses a **singleton browser instance** (Playwright Chromium) shared across requests, with a configurable semaphore limiting concurrent browser contexts. This avoids spinning up a new browser for every request.
+The service uses a **singleton browser instance** (Playwright Chromium) shared across requests, with one browser context at a time and a shared lock queuing the complete HTTP and delivery flow across single checks and batches. This avoids spinning up a new browser for every request.
 
 ---
 
@@ -136,10 +136,10 @@ Copy `.env.example` to `.env` and adjust as needed.
 | `USER_AGENT`               | Chrome UA   | User-Agent header for HTTP requests                      |
 | `PLAYWRIGHT_TIMEOUT`       | `30000`     | Playwright navigation timeout in milliseconds            |
 | `PLAYWRIGHT_HEADLESS`      | `true`      | Run Chromium headless                                    |
-| `PLAYWRIGHT_MAX_CONCURRENT`| `3`         | Max simultaneous browser contexts                        |
+| `PLAYWRIGHT_MAX_CONCURRENT`| `1`         | Browser contexts (must remain 1)                        |
 | `PLAYWRIGHT_SLOW_MO`       | `0`         | Milliseconds between Playwright actions (0 = disabled)   |
 | `BATCH_MAX_PRODUCTS`       | `20`        | Maximum products per batch request                       |
-| `BATCH_CONCURRENCY`        | `5`         | Concurrent scrapers in batch mode                        |
+| `BATCH_CONCURRENCY`        | `1`         | Batch concurrency (must remain 1)                        |
 | `RATE_LIMIT_REQUESTS`      | `10`        | Requests per rate-limit window                           |
 | `RATE_LIMIT_WINDOW`        | `60`        | Rate-limit window in seconds                             |
 
@@ -207,7 +207,7 @@ docker compose ps
 ```
 
 The container serves the API on `0.0.0.0:8081` by default. Change `HOST_PORT`
-or the browser-concurrency variables through the environment or `.env`.
+through the environment or `.env`. Keep `PLAYWRIGHT_MAX_CONCURRENT` and `BATCH_CONCURRENCY` at `1`; larger values are rejected.
 
 ### Verify
 
@@ -530,7 +530,7 @@ Mono<ProductCheckResponse> response = webClient.post()
 
 6. **Geographic availability** — Flipkart may serve different page structures or restrict access based on the scraper's IP location.
 
-7. **Single browser instance** — Only one Chromium browser is shared across all requests. Under very high load, requests will queue at the semaphore. Scale by increasing `PLAYWRIGHT_MAX_CONCURRENT` (within memory limits).
+7. **Sequential scraping** — One product is processed at a time across single checks and batches, including HTTP fetching and browser delivery verification. Additional products queue. Run one Uvicorn worker per container. A batch of N products takes approximately N times the single-product duration, plus any queue time; allow longer client timeouts for larger batches.
 
 8. **No caching** — Each request triggers a fresh scrape. No result caching is implemented; add a caching layer (e.g., Redis) externally if needed.
 

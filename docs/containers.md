@@ -113,7 +113,7 @@ image reference.
 - Application port: `8000` by default; setting `PORT` changes both Uvicorn and
   the container health probe.
 - Health path: `/health`.
-- Starting resources: 1 CPU and 2 GiB RAM with at most three browser contexts.
+- Starting resources: 1 CPU and 2 GiB RAM with one browser context and one product check at a time.
 - One application worker per container; add container replicas for capacity.
 - No database, persistent disk, or background scheduler is required.
 
