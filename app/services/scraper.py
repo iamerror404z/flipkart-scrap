@@ -22,6 +22,7 @@ from app.schemas.response import (
     ProductInfo,
 )
 from app.services.availability import build_availability
+from app.services.upstream import page_error
 from app.services.delivery import check_delivery as _check_delivery_playwright
 from app.utils.parser import (
     detect_stock_status_from_html,
@@ -48,7 +49,11 @@ _HEADERS = {
         "q=0.9,image/avif,image/webp,*/*;q=0.8"
     ),
     "Referer": "https://www.flipkart.com/",
-    "DNT": "1",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
 }
 
 
@@ -120,51 +125,48 @@ async def _fetch_html(url: str, result: ScraperResult) -> str | None:
     Attempt to fetch the product page using httpx.
     Sets result error fields and returns None on failure.
     """
-    try:
-        async with httpx.AsyncClient(
-            headers=_HEADERS,
-            follow_redirects=True,
-            max_redirects=settings.httpx_max_redirects,
-            timeout=settings.httpx_timeout,
-        ) as client:
-            response = await client.get(url)
-
-            if response.status_code == 403:
-                result.error_code = "ACCESS_DENIED"
-                result.error_message = (
-                    "Flipkart returned HTTP 403 (Forbidden). "
-                    "The request may have been blocked."
-                )
+    timeout = httpx.Timeout(settings.httpx_timeout, connect=settings.httpx_connect_timeout)
+    transport = httpx.AsyncHTTPTransport(
+        proxy=settings.proxy_url,
+        local_address="0.0.0.0" if settings.httpx_force_ipv4 else None,
+    )
+    async with httpx.AsyncClient(
+        headers=_HEADERS, follow_redirects=True,
+        max_redirects=settings.httpx_max_redirects,
+        timeout=timeout, transport=transport, trust_env=False,
+    ) as client:
+        # Keep cookies and connections across retries within this request.
+        for attempt in range(settings.httpx_retries + 1):
+            try:
+                response = await client.get(url)
+                if response.status_code in (500, 502, 503, 504) and attempt < settings.httpx_retries:
+                    await asyncio.sleep(settings.httpx_retry_backoff * 2 ** attempt)
+                    continue
+                error = page_error(response.text, response.status_code)
+                if error:
+                    result.error_code, result.error_message = error
+                    return None
+                return response.text
+            except (httpx.TimeoutException, httpx.ConnectError) as exc:
+                if attempt < settings.httpx_retries:
+                    logger.warning("Transient upstream %s; retry %s", type(exc).__name__, attempt + 1)
+                    await asyncio.sleep(settings.httpx_retry_backoff * 2 ** attempt)
+                    continue
+                if isinstance(exc, httpx.TimeoutException):
+                    result.error_code = "TIMEOUT"
+                    result.error_message = (
+                        "HTTP request timed out after retries. Check outbound connectivity; "
+                        "persistent datacenter-IP timeouts may require an Indian residential/ISP proxy."
+                    )
+                else:
+                    result.error_code = "NETWORK_ERROR"
+                    result.error_message = "Could not connect to Flipkart or the configured proxy."
+            except httpx.RequestError:
+                result.error_code = "NETWORK_ERROR"
+                result.error_message = "HTTP transport failed while contacting Flipkart."
+            if result.error_code:
                 return None
-
-            if response.status_code == 429:
-                result.error_code = "RATE_LIMITED"
-                result.error_message = (
-                    "Flipkart returned HTTP 429 (Too Many Requests). "
-                    "Please retry after a short delay."
-                )
-                return None
-
-            if response.status_code == 404:
-                result.error_code = "PRODUCT_NOT_FOUND"
-                result.error_message = "The product page was not found (HTTP 404)."
-                return None
-
-            response.raise_for_status()
-            return response.text
-
-    except httpx.TimeoutException:
-        result.error_code = "TIMEOUT"
-        result.error_message = "HTTP request timed out."
-        return None
-    except httpx.HTTPStatusError as exc:
-        result.error_code = "HTTP_ERROR"
-        result.error_message = f"HTTP {exc.response.status_code} from Flipkart."
-        return None
-    except httpx.RequestError as exc:
-        result.error_code = "NETWORK_ERROR"
-        result.error_message = f"Network error: {exc}"
-        return None
+    return None
 
 
 # ---------------------------------------------------------------------------
