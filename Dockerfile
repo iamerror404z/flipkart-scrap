@@ -34,7 +34,7 @@ RUN --mount=type=cache,target=/root/.cache/playwright-downloads \
 
 FROM debian:bookworm-slim AS runtime
 
-ARG APP_VERSION=1.0.2
+ARG APP_VERSION=1.0.3
 LABEL org.opencontainers.image.title="Flipkart Scraper API" \
       org.opencontainers.image.description="Product stock and verified PIN-code delivery checks" \
       org.opencontainers.image.version="${APP_VERSION}"

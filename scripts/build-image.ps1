@@ -1,5 +1,5 @@
 param(
-    [string]$Image = 'flipkart-scraper:1.0.2',
+    [string]$Image = 'flipkart-scraper:1.0.3',
     [switch]$Export
 )
 
@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $imageWorkspace = Split-Path -Parent $PSScriptRoot
 Push-Location -LiteralPath $imageWorkspace
 try {
-    docker build --platform linux/amd64 --build-arg APP_VERSION=1.0.2 --tag $Image .
+    docker build --platform linux/amd64 --build-arg APP_VERSION=1.0.3 --tag $Image .
     if ($LASTEXITCODE -ne 0) { throw 'Docker build failed.' }
 
     Get-Content -LiteralPath (Join-Path $PSScriptRoot 'container_smoke.py') -Raw |
@@ -17,7 +17,7 @@ try {
     if ($Export) {
         $imageOutputDir = Join-Path $imageWorkspace 'dist'
         New-Item -ItemType Directory -Path $imageOutputDir -Force | Out-Null
-        $imageArchive = Join-Path $imageOutputDir 'flipkart-scraper-1.0.2-linux-amd64.tar'
+        $imageArchive = Join-Path $imageOutputDir 'flipkart-scraper-1.0.3-linux-amd64.tar'
         docker image save --output $imageArchive $Image
         if ($LASTEXITCODE -ne 0) { throw 'Docker image export failed.' }
         $imageHash = Get-FileHash -LiteralPath $imageArchive -Algorithm SHA256

@@ -182,7 +182,7 @@ ReDoc: http://localhost:8000/redoc
 
 ## Docker Setup
 
-The release image is `flipkart-scraper:1.0.2` for Linux AMD64. It packages
+The release image is `flipkart-scraper:1.0.3` for Linux AMD64. It packages
 headless Chromium, runs as a non-root user, and includes a health check.
 See [container and private-registry instructions](docs/containers.md) for
 image export, Docker Hub, and cloud settings.
@@ -190,7 +190,7 @@ image export, Docker Hub, and cloud settings.
 ### Build
 
 ```bash
-docker build --platform linux/amd64 -t flipkart-scraper:1.0.2 .
+docker build --platform linux/amd64 -t flipkart-scraper:1.0.3 .
 ```
 
 On Windows, build and verify Chromium with:

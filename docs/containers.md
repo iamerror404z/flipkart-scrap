@@ -18,7 +18,7 @@ browser requirement, and base-image comparison.
 On this Linux VM, build the cloud fixes and check the packaged browser with:
 
 ```bash
-DOCKER_BUILDKIT=1 docker build --build-arg APP_VERSION=1.0.2-cloud -t flipkart-scraper:cloud .
+DOCKER_BUILDKIT=1 docker build --build-arg APP_VERSION=1.0.3-cloud -t flipkart-scraper:cloud .
 docker run --rm -i --init --entrypoint python flipkart-scraper:cloud - < scripts/container_smoke.py
 ```
 
@@ -36,7 +36,7 @@ For the Windows build helper:
 ./scripts/build-image.ps1
 ```
 
-This builds `flipkart-scraper:1.0.2` for `linux/amd64` and verifies that the
+This builds `flipkart-scraper:1.0.3` for `linux/amd64` and verifies that the
 API routes exist and Chromium can launch and interact with a page as the
 unprivileged container user. Docker Desktop must be running in Linux mode.
 
@@ -50,7 +50,7 @@ For an archive that can be transferred without a registry:
 
 ```powershell
 ./scripts/build-image.ps1 -Export
-docker load --input dist/flipkart-scraper-1.0.2-linux-amd64.tar
+docker load --input dist/flipkart-scraper-1.0.3-linux-amd64.tar
 ```
 
 The export includes a SHA-256 checksum. Every image also records its complete
@@ -73,7 +73,7 @@ To run an already-built image directly:
 
 ```bash
 docker run -d --name flipkart-scraper --init --restart unless-stopped \
-  --memory 2g --shm-size 1g -p 127.0.0.1:8001:8000 flipkart-scraper:1.0.2
+  --memory 2g --shm-size 1g -p 127.0.0.1:8001:8000 flipkart-scraper:1.0.3
 curl http://127.0.0.1:8001/health
 ```
 
@@ -83,24 +83,26 @@ used by its frontend. Delivery checks typically take tens of seconds, so
 configure the cloud proxy's request timeout to at least 300 seconds and allow
 additional time for larger batches.
 
-## Private Docker Hub repository
+## Docker Hub repository
 
-The release repository is `iamerror404/flipkart-scraper` and must remain
-private. Verify repository privacy in Docker Hub before the first push.
+The release repository is `iamerror404/flipkart-scraper`. Docker Hub reported
+it as public when version `1.0.3` was published to the user-specified
+repository. Its images are publicly downloadable. Registry visibility is
+configured separately in Docker Hub.
 
 ```bash
 docker login
-docker tag flipkart-scraper:1.0.2 iamerror404/flipkart-scraper:1.0.2
-docker push iamerror404/flipkart-scraper:1.0.2
+docker tag flipkart-scraper:1.0.3 iamerror404/flipkart-scraper:1.0.3
+docker push iamerror404/flipkart-scraper:1.0.3
 ```
 
-On a cloud host authorized to pull the private repository:
+On a cloud host:
 
 ```bash
 docker login
-docker pull iamerror404/flipkart-scraper:1.0.2
+docker pull iamerror404/flipkart-scraper:1.0.3
 docker run -d --name flipkart-scraper --init --restart unless-stopped \
-  --memory 2g --shm-size 1g -p 8000:8000 iamerror404/flipkart-scraper:1.0.2
+  --memory 2g --shm-size 1g -p 8000:8000 iamerror404/flipkart-scraper:1.0.3
 ```
 
 Keep registry credentials in the hosting platform's registry settings or
