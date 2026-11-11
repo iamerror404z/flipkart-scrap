@@ -15,6 +15,23 @@ browser requirement, and base-image comparison.
 
 ## Build and verify
 
+On this Linux VM, build the cloud fixes and check the packaged browser with:
+
+```bash
+DOCKER_BUILDKIT=1 docker build --build-arg APP_VERSION=1.0.2-cloud -t flipkart-scraper:cloud .
+docker run --rm -i --init --entrypoint python flipkart-scraper:cloud - < scripts/container_smoke.py
+```
+
+To run beside the systemd API already using port 8081:
+
+```bash
+docker run -d --name flipkart-scraper-cloud --init --restart unless-stopped \
+  --memory 2g --shm-size 1g -p 8082:8000 flipkart-scraper:cloud
+curl http://127.0.0.1:8082/health
+```
+
+For the Windows build helper:
+
 ```powershell
 ./scripts/build-image.ps1
 ```

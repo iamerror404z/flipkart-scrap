@@ -96,6 +96,23 @@ fresh Ubuntu installation was not exercised here. Compose YAML was parsed,
 but the VM has no Docker Compose CLI. The existing registry image remains
 unchanged and must be rebuilt to use the cloud fixes in a container.
 
+### New cloud Docker image
+
+The local `flipkart-scraper:cloud` image was subsequently built successfully:
+`sha256:46f3a7186652941013e00361e1e7c730724fc790a5ae31f9284dc8cd3e3f408b`,
+478,497,104 bytes. Linux rejected stripping the running Python executable
+in place; the builder now strips a temporary copy and atomically replaces
+the original. A running-executable reproduction passed after this fix.
+
+The packaged API/Chromium smoke check passed as UID 10001 with Python 3.13,
+Playwright 1.54.0 and Chromium 139.0.7258.5. Docker reported the API container
+healthy. All six real curl calls were repeated against this image on port
+8082; all passed with the same negative delivery results listed above.
+The full responses are in
+[cloud-container-verification.json](cloud-container-verification.json).
+The temporary verification container was removed; the systemd API continues
+on port 8081. This local image has not been pushed to a registry.
+
 No proxy was supplied or needed in these tests. Actual operation through a
 residential proxy has not been verified. If access becomes persistently
 blocked, supply an Indian residential/ISP proxy using the documented env

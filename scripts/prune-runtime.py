@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 
 def remove(path: Path) -> None:
@@ -24,7 +25,16 @@ def strip_elf(root: Path) -> None:
                 if handle.read(4) != b"\x7fELF":
                     continue
             before = path.stat().st_size
-            subprocess.run(["strip", "--strip-unneeded", str(path)], check=True)
+            # Linux cannot modify a running executable in place (ETXTBSY).
+            # Strip a copy and atomically replace it, preserving file mode.
+            with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".strip-", delete=False) as handle:
+                temporary = Path(handle.name)
+            try:
+                shutil.copy2(path, temporary)
+                subprocess.run(["strip", "--strip-unneeded", str(temporary)], check=True)
+                temporary.replace(path)
+            finally:
+                temporary.unlink(missing_ok=True)
             saved += before - path.stat().st_size
     print(f"Stripped {root}: removed {saved:,} bytes of symbols/debug data.", flush=True)
 
