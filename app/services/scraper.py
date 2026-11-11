@@ -3,7 +3,7 @@ Flipkart scraper service.
 
 Strategy:
   1. Attempt HTTP-only fetch with httpx + BeautifulSoup.
-  2. If required info is missing, fall back to Playwright for JS rendering.
+  2. Parse product details and stock from JSON-LD or HTML purchase signals.
   3. PIN code delivery check is always done via Playwright because it
      requires DOM interaction (filling the PIN input and reading dynamic result).
 """
@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
-from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
@@ -20,23 +18,19 @@ from bs4 import BeautifulSoup
 from app.config import get_settings
 from app.schemas.response import (
     AvailabilityInfo,
-    DeliveryStatus,
     MetadataInfo,
     ProductInfo,
-    StockStatus,
 )
 from app.services.availability import build_availability
-from app.services.browser import browser_manager
+from app.services.delivery import check_delivery as _check_delivery_playwright
 from app.utils.parser import (
     detect_stock_status_from_html,
     detect_stock_status_from_json_ld,
-    extract_delivery_info,
     extract_json_ld,
     extract_product_id,
     extract_product_image,
     extract_product_name,
     extract_product_price,
-    extract_window_state,
     find_product_json_ld,
 )
 
@@ -249,178 +243,3 @@ def _determine_stock_status(
     status = detect_stock_status_from_html(soup)
     logger.debug("Stock status from HTML heuristics: %s", status)
     return status
-
-
-# ---------------------------------------------------------------------------
-# Playwright-based delivery check
-# ---------------------------------------------------------------------------
-
-_PINCODE_SELECTORS = [
-    "#pincodeInputId",
-    "input#pincodeInputId",
-    "input[id*='pincode']",
-    "input[placeholder*='Enter Delivery Pincode']",
-    "input[placeholder*='pincode']",
-    "input[placeholder*='Pincode']",
-    "input[placeholder*='PIN']",
-    "input[maxlength='6']",
-    "input[class*='_3GW3Fp']",
-    "input[class*='QhpIlS']",
-    "input[type='text'][class*='pin']",
-]
-
-_CHECK_BTN_SELECTORS = [
-    "span:has-text('Check')",
-    "button:has-text('Check')",
-    "div:has-text('Check')",
-    "button:has-text('Apply')",
-    "a:has-text('Check')",
-    "span[class*='_2P_LDn']",
-    "div[class*='_2KpZ6l']:has-text('Check')",
-]
-
-_DELIVERY_SECTION_SELECTORS = [
-    "div[class*='_3XINqE']",   # delivery info block
-    "div[class*='_2Tpdn3']",
-    "div[class*='aw9Thp']",
-    "div[class*='delivery']",
-    "div[class*='Delivery']",
-    "span[class*='_2Tpdn3']",
-]
-
-
-async def _check_delivery_playwright(url: str, pincode: str) -> dict:
-    """
-    Open the Flipkart product page in a browser context, fill the PIN
-    code input, trigger the check, and read the delivery result.
-
-    Returns a dict:  { status, message, estimatedDate }
-    """
-    logger.info("Playwright delivery check for pincode=%s url=%s", pincode, url)
-
-    try:
-        async with browser_manager.new_context() as ctx:
-            page = await ctx.new_page()
-
-            # Block images/fonts/media to speed up load
-            await page.route(
-                "**/*",
-                lambda route: route.abort()
-                if route.request.resource_type in ("image", "font", "media")
-                else route.continue_(),
-            )
-
-            # Detect CAPTCHA / bot challenge
-            async def _on_response(response: Any) -> None:
-                if response.status in (403, 429):
-                    logger.warning(
-                        "Bot-protection response: %s %s", response.status, response.url
-                    )
-
-            page.on("response", _on_response)
-
-            await page.goto(
-                url,
-                wait_until="domcontentloaded",
-                timeout=settings.playwright_timeout,
-            )
-
-            # Check for CAPTCHA / access block
-            page_text_lower = (await page.inner_text("body")).lower()
-            if any(
-                kw in page_text_lower
-                for kw in ("captcha", "verify you are human", "robot", "access denied")
-            ):
-                logger.warning("CAPTCHA or access block detected on %s", url)
-                return {
-                    "status": "UNKNOWN",
-                    "message": "CAPTCHA or bot-verification page encountered.",
-                    "estimatedDate": None,
-                }
-
-            # If a "Change" button is present (e.g. pre-selected location), click it
-            for change_sel in ("span:has-text('Change')", "button:has-text('Change')", "div:has-text('Change')"):
-                try:
-                    c_btn = page.locator(change_sel).first
-                    if await c_btn.count() > 0 and await c_btn.is_visible():
-                        await c_btn.click()
-                        await page.wait_for_timeout(600)
-                        break
-                except Exception:
-                    pass
-
-            # Locate PIN input
-            pin_input = None
-            for sel in _PINCODE_SELECTORS:
-                try:
-                    el = page.locator(sel).first
-                    if await el.count() > 0:
-                        pin_input = el
-                        break
-                except Exception:
-                    continue
-
-            if pin_input is None:
-                logger.warning("Could not locate PIN code input on %s", url)
-                return _fallback_delivery_from_page(await page.content())
-
-            # Clear + type pincode
-            await pin_input.click()
-            await pin_input.fill("")
-            await pin_input.type(pincode, delay=50)
-
-            # Click Check button
-            check_btn = None
-            for sel in _CHECK_BTN_SELECTORS:
-                try:
-                    el = page.locator(sel).first
-                    if await el.count() > 0:
-                        check_btn = el
-                        break
-                except Exception:
-                    continue
-
-            if check_btn:
-                await check_btn.click()
-            else:
-                # Fallback: press Enter
-                await pin_input.press("Enter")
-
-            # Wait for delivery response
-            await page.wait_for_timeout(2500)
-
-            # Try to find delivery section
-            delivery_text = ""
-            for sel in _DELIVERY_SECTION_SELECTORS:
-                try:
-                    loc = page.locator(sel).first
-                    if await loc.count() > 0:
-                        delivery_text = await loc.inner_text()
-                        if delivery_text.strip():
-                            break
-                except Exception:
-                    continue
-
-            if not delivery_text:
-                # Broader fallback
-                delivery_text = await page.inner_text("body")
-
-            return extract_delivery_info(delivery_text)
-
-    except asyncio.TimeoutError:
-        logger.warning("Playwright timeout during delivery check for %s", url)
-        return {"status": "UNKNOWN", "message": "Playwright timeout.", "estimatedDate": None}
-    except Exception as exc:
-        logger.exception("Playwright delivery check failed for %s", url)
-        return {
-            "status": "UNKNOWN",
-            "message": f"Browser error: {exc}",
-            "estimatedDate": None,
-        }
-
-
-def _fallback_delivery_from_page(html: str) -> dict:
-    """When PIN input is not found, infer delivery from page text."""
-    soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text(" ", strip=True)
-    return extract_delivery_info(text)

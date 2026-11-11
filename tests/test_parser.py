@@ -170,6 +170,29 @@ class TestProductExtraction:
 # ---------------------------------------------------------------------------
 
 class TestStockStatus:
+    def test_exchange_restriction_does_not_override_purchase_button(self):
+        soup = BeautifulSoup(
+            "<div>Exchange offer: Not available at this Pincode</div>"
+            "<button>Buy Now</button>", "html.parser"
+        )
+        assert detect_stock_status_from_html(soup) == "IN_STOCK"
+
+    def test_offer_unavailable_is_not_product_out_of_stock(self):
+        soup = BeautifulSoup("<div>Bank offer not available</div>", "html.parser")
+        assert detect_stock_status_from_html(soup) == "UNKNOWN"
+
+    @pytest.mark.parametrize("attribute", ['disabled', 'aria-disabled="true"', 'hidden'])
+    def test_inactive_purchase_button_is_not_stock_evidence(self, attribute):
+        soup = BeautifulSoup(f"<button {attribute}>Buy Now</button>", "html.parser")
+        assert detect_stock_status_from_html(soup) == "UNKNOWN"
+
+    def test_recommendation_sold_out_does_not_override_purchase_button(self):
+        soup = BeautifulSoup(
+            "<button>Add to Cart</button><aside>Similar item: Sold Out</aside>",
+            "html.parser",
+        )
+        assert detect_stock_status_from_html(soup) == "IN_STOCK"
+
     def test_in_stock_from_html(self):
         soup = BeautifulSoup(
             "<html><body><button>Add to Cart</button></body></html>", "html.parser"
@@ -211,6 +234,23 @@ class TestStockStatus:
 # ---------------------------------------------------------------------------
 
 class TestDeliveryInfo:
+    def test_exchange_offer_is_not_a_delivery_restriction(self):
+        text = "Exchange offer: Not available at this Pincode\nDelivery by Friday, 13 Nov"
+        result = extract_delivery_info(text)
+        assert result["status"] == "DELIVERABLE"
+        assert result["message"] == "Delivery by Friday, 13 Nov"
+
+    def test_exchange_restriction_alone_has_unknown_delivery(self):
+        assert extract_delivery_info("Exchange offer: Not available at this Pincode")["status"] == "UNKNOWN"
+
+    def test_delivery_date_split_across_dom_lines(self):
+        result = extract_delivery_info("Delivery by\nFriday, 13 Nov\nSeller: Test")
+        assert result == {"status": "DELIVERABLE", "message": "Delivery by Friday, 13 Nov", "estimatedDate": "13 Nov"}
+
+    def test_sale_date_is_not_estimated_delivery(self):
+        result = extract_delivery_info("Sale ends 12 Nov. Delivery by 15 Nov")
+        assert result["estimatedDate"] == "15 Nov"
+
     def test_deliverable(self):
         text = "Delivery by 15 Nov, Thursday"
         result = extract_delivery_info(text)
@@ -226,6 +266,16 @@ class TestDeliveryInfo:
         text = "Delivery not available for this location."
         result = extract_delivery_info(text)
         assert result["status"] == "NOT_DELIVERABLE"
+
+    @pytest.mark.parametrize("text", [
+        "Not deliverable at your location",
+        "Not deliverable in your location",
+        "Not\ndeliverable at your location",
+    ])
+    def test_current_location_restriction(self, text):
+        result = extract_delivery_info(text)
+        assert result["status"] == "NOT_DELIVERABLE"
+        assert result["estimatedDate"] is None
 
     def test_unknown_delivery(self):
         text = "Some unrelated product description text."

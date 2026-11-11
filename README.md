@@ -52,9 +52,11 @@ scraper.py (ScraperService)
   └── Step 4: PIN code delivery check (always via Playwright)
           ├── Open product page in Chromium
           ├── Locate PIN code input
-          ├── Enter PIN and trigger check
-          ├── Wait for DOM update
-          └── Extract delivery information
+          ├── Open delivery location search when needed
+          ├── Enter PIN and select the matching address
+          ├── Confirm the map location when prompted
+          ├── Wait for the requested location to be applied
+          └── Extract information only from the delivery section
 ```
 
 The service uses a **singleton browser instance** (Playwright Chromium) shared across requests, with a configurable semaphore limiting concurrent browser contexts. This avoids spinning up a new browser for every request.
@@ -79,6 +81,7 @@ flipkart-scraper/
 │   ├── services/
 │   │   ├── scraper.py       # Main scraping logic
 │   │   ├── browser.py       # Playwright browser manager (singleton)
+│   │   ├── delivery.py      # PIN selection, confirmation, and scoped delivery checks
 │   │   └── availability.py  # Availability classification logic
 │   │
 │   ├── utils/
@@ -104,14 +107,14 @@ flipkart-scraper/
 
 | Component      | Library               | Version  |
 |----------------|-----------------------|----------|
-| API framework  | FastAPI               | 0.115.5  |
-| ASGI server    | Uvicorn               | 0.32.1   |
-| Validation     | Pydantic              | 2.10.1   |
-| Settings       | pydantic-settings     | 2.6.1    |
-| HTTP client    | httpx                 | 0.28.0   |
-| HTML parsing   | BeautifulSoup4 + lxml | 4.12.3   |
-| Browser        | Playwright (Chromium) | 1.49.0   |
-| Testing        | pytest + pytest-asyncio | 8.3.4  |
+| API framework  | FastAPI               | 0.162.2  |
+| ASGI server    | Uvicorn               | 0.54.0   |
+| Validation     | Pydantic              | 2.14.3   |
+| Settings       | pydantic-settings     | 2.16.2   |
+| HTTP client    | httpx                 | 0.28.1   |
+| HTML parsing   | BeautifulSoup4        | 4.13.4   |
+| Browser        | Playwright (Chromium) | 1.54.0   |
+| Testing        | pytest + pytest-asyncio | See requirements.txt |
 
 ---
 
@@ -174,36 +177,37 @@ ReDoc: http://localhost:8000/redoc
 
 ## Docker Setup
 
+The release image is `flipkart-scraper:1.0.2` for Linux AMD64. It packages
+headless Chromium, runs as a non-root user, and includes a health check.
+See [container and private-registry instructions](docs/containers.md) for
+image export, Docker Hub, and cloud settings.
+
 ### Build
 
 ```bash
-docker build -t flipkart-scraper .
+docker build --platform linux/amd64 -t flipkart-scraper:1.0.2 .
+```
+
+On Windows, build and verify Chromium with:
+
+```powershell
+./scripts/build-image.ps1
 ```
 
 ### Run
 
 ```bash
-docker run -d \
-  --name flipkart-scraper \
-  -p 8000:8000 \
-  flipkart-scraper
+docker compose up -d --build
+docker compose ps
 ```
 
-### With environment overrides
-
-```bash
-docker run -d \
-  --name flipkart-scraper \
-  -p 8000:8000 \
-  -e PLAYWRIGHT_MAX_CONCURRENT=5 \
-  -e BATCH_CONCURRENCY=3 \
-  flipkart-scraper
-```
+The container serves the API on port `8001` by default. Change `HOST_PORT`
+or the browser-concurrency variables through the environment or `.env`.
 
 ### Verify
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
 
 ---
@@ -348,6 +352,10 @@ Content-Type: application/json
 
 > **Important:** `UNKNOWN` is never treated as `false`. Missing information is returned as `null`, not `false`.
 
+If the requested PIN cannot be selected or confirmed, delivery is returned as
+`UNKNOWN` even when a default delivery date appears on the page. Exchange and
+bank-offer restrictions are not used as evidence of product stock or delivery.
+
 ---
 
 ## Error Codes
@@ -380,6 +388,13 @@ pytest tests/ -v
 
 ```bash
 pytest tests/test_parser.py -v
+```
+
+Browser regression tests use local HTML pages, with no requests to Flipkart:
+
+```bash
+playwright install chromium
+pytest tests/test_delivery.py -v
 ```
 
 ### Run only API tests

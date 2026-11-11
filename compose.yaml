@@ -1,0 +1,21 @@
+services:
+  api:
+    image: ${IMAGE_NAME:-flipkart-scraper:1.0.2}
+    build:
+      context: .
+      args:
+        APP_VERSION: "1.0.2"
+    init: true
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-8001}:8000"
+    environment:
+      PORT: "8000"
+      PLAYWRIGHT_HEADLESS: "true"
+      PLAYWRIGHT_TIMEOUT: ${PLAYWRIGHT_TIMEOUT:-30000}
+      PLAYWRIGHT_MAX_CONCURRENT: ${PLAYWRIGHT_MAX_CONCURRENT:-3}
+      BATCH_CONCURRENCY: ${BATCH_CONCURRENCY:-5}
+      HTTPX_TIMEOUT: ${HTTPX_TIMEOUT:-20.0}
+    shm_size: "1gb"
+    mem_limit: "2g"
+    restart: unless-stopped
+    stop_grace_period: 45s

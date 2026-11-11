@@ -38,7 +38,7 @@ app = FastAPI(
         "A lightweight REST API that scrapes Flipkart product pages to determine "
         "stock status and PIN-code-based delivery availability."
     ),
-    version="1.0.0",
+    version="1.0.2",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",

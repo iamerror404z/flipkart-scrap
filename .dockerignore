@@ -1,28 +1,16 @@
-# Version control
-.git
-.gitignore
+# Only runtime source and required build inputs belong in the build context.
+**
+!Dockerfile
+!.dockerignore
+!requirements-runtime.txt
+!scripts/
+!scripts/install-browser.py
+!scripts/prune-runtime.py
+!app/
+!app/**
+app/**/__pycache__/
+app/**/*.pyc
+app/**/*.pyo
 
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Tests
-tests/
-
-# Dev tools
-.env
-.env.*
-!.env.example
-
-# Docs
-README.md
-*.md
-
-# IDE
-.vscode/
-.idea/
-*.swp
+# The allowlist above also excludes .git, .env*, venv/.venv, tests, logs,
+# node_modules, dist exports, editor settings, and all local caches.

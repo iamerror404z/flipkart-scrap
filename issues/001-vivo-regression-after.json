@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "productUrl": "https://www.flipkart.com/vivo-t5x-5g-cosmic-green-128-gb/p/itm7da8aa253e72b?pid=MOBHQC8ZMRCP62TS&lid=LSTMOBHQC8ZMRCP62TSTXXKV0&hl_lid=&marketplace=FLIPKART&fm=eyJ3dHAiOiJyZWNvIiwicHJwdCI6ImhwIiwibWlkIjoicGVyc29uYWxpc2VkUmVjb21tZW5kYXRpb24vcDJwLXNhbWUifQ%3D%3D&ctx=eyJkZWxpdmVyZWRCeSI6IiIsImRpc3BsYXlQcmljZSI6IjI3OTk5In0%3D&pageUID=1794309899040",
+  "pincode": "638003",
+  "product": {
+    "name": "vivo T5x 5G (Cosmic Green, 128 GB)",
+    "price": 27999.0,
+    "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/q/s/p/t5x-5g-v2545-vivo-original-imahp9qdvzgnzy8c.jpeg?q=70",
+    "productId": "MOBHQC8ZMRCP62TS"
+  },
+  "availability": {
+    "isStock": true,
+    "isDeliverable": true,
+    "stockStatus": "IN_STOCK",
+    "deliveryStatus": "DELIVERABLE",
+    "deliveryMessage": "Delivery by Saturday, 14 Nov",
+    "estimatedDelivery": "14 Nov"
+  },
+  "metadata": {
+    "source": "flipkart",
+    "checkedAt": "2026-11-10T13:40:26Z"
+  },
+  "error": null
+}

@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "productUrl": "https://www.flipkart.com/poco-x7-5g-yellow-256-gb/p/itm09a41b8f384f7?pid=MOBH7YZ9NSDFC3EK&lid=LSTMOBH7YZ9NSDFC3EK54Z4YF&marketplace=FLIPKART&q=poco+x7&store=tyy%2F4io&srno=s_1_1&otracker=search&otracker1=search&fm=organic&iid=3c7ddbb6-4042-466b-9fce-0b77d7fca48f.MOBH7YZ9NSDFC3EK.SEARCH&ppt=None&ppn=None&ssid=v9i6jq7ywg0000001794313436178&qH=a25d2148acd08d58&ov_redirect=true",
+  "pincode": "638003",
+  "product": {
+    "name": "POCO X7 5G (Yellow, 256 GB)",
+    "price": 19999.0,
+    "image": "https://rukmini1.flixcart.com/image/1500/1500/xif0q/mobile/v/r/z/-resized-original-imahbzrquuzcbyv3.jpeg?q=70",
+    "productId": "MOBH7YZ9NSDFC3EK"
+  },
+  "availability": {
+    "isStock": true,
+    "isDeliverable": null,
+    "stockStatus": "IN_STOCK",
+    "deliveryStatus": "UNKNOWN",
+    "deliveryMessage": "Timed out while confirming delivery for PIN 638003.",
+    "estimatedDelivery": null
+  },
+  "metadata": {
+    "source": "flipkart",
+    "checkedAt": "2026-11-10T12:30:07Z"
+  },
+  "error": null
+}

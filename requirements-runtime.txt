@@ -1,0 +1,8 @@
+# Direct runtime versions used for the verified release.
+fastapi==0.162.2
+uvicorn[standard]==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.16.2
+httpx==0.28.1
+beautifulsoup4==4.13.4
+playwright==1.54.0

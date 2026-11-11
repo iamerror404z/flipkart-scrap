@@ -178,7 +178,6 @@ _OOS_PATTERNS = [
     re.compile(r"sold\s*out", re.I),
     re.compile(r"out\s*of\s*stock", re.I),
     re.compile(r"currently\s*unavailable", re.I),
-    re.compile(r"not\s*available", re.I),
     re.compile(r"notify\s*me", re.I),
 ]
 
@@ -194,7 +193,17 @@ def detect_stock_status_from_html(soup: BeautifulSoup) -> str:
     Returns 'IN_STOCK', 'OUT_OF_STOCK', or 'UNKNOWN'
     based on HTML content heuristics.
     """
-    page_text = soup.get_text(" ", strip=True)
+    # Purchase controls are stronger evidence than restrictions on unrelated
+    # exchange/bank offers or sold-out recommendations elsewhere on the page.
+    for control in soup.select("button, a, [role='button']"):
+        if not _is_inactive(control) and re.fullmatch(
+            r"add\s*to\s*cart|buy\s*now", control.get_text(" ", strip=True), re.I
+        ):
+            return "IN_STOCK"
+
+    page_text = " ".join(
+        str(text).strip() for text in soup.strings if not _is_inactive(text.parent)
+    )
 
     for pat in _OOS_PATTERNS:
         if pat.search(page_text):
@@ -205,6 +214,21 @@ def detect_stock_status_from_html(soup: BeautifulSoup) -> str:
             return "IN_STOCK"
 
     return "UNKNOWN"
+
+
+def _is_inactive(tag: Tag | None) -> bool:
+    while isinstance(tag, Tag):
+        style = str(tag.get("style", ""))
+        if (
+            tag.has_attr("disabled")
+            or tag.has_attr("hidden")
+            or tag.get("aria-disabled") == "true"
+            or tag.get("aria-hidden") == "true"
+            or re.search(r"(?:display\s*:\s*none|visibility\s*:\s*hidden)", style, re.I)
+        ):
+            return True
+        tag = tag.parent
+    return False
 
 
 def detect_stock_status_from_json_ld(product_ld: dict) -> str:
@@ -240,12 +264,12 @@ _DELIVERY_POSITIVE = [
 ]
 
 _DELIVERY_NEGATIVE = [
-    re.compile(r"not\s+serviceable", re.I),
+    re.compile(r"\bnot\s+serviceable\b", re.I),
+    re.compile(r"\bnot\s+deliverable\b", re.I),
     re.compile(r"does\s+not\s+deliver", re.I),
     re.compile(r"unavailable\s+in\s+your\s+area", re.I),
-    re.compile(r"delivery\s+not\s+available", re.I),
-    re.compile(r"pincode.*not.*serviceable", re.I),
-    re.compile(r"not.*available.*pincode", re.I),
+    re.compile(r"\bdelivery\s+(?:is\s+)?not\s+available\b", re.I),
+    re.compile(r"\b(?:cannot|can't)\s+be\s+delivered\b", re.I),
 ]
 
 _DELIVERY_DATE_RE = re.compile(
@@ -262,20 +286,28 @@ def extract_delivery_info(text: str) -> dict:
         message      : str | None
         estimatedDate: str | None
     """
+    normalized = " ".join(text.split())
     for pat in _DELIVERY_NEGATIVE:
-        if pat.search(text):
+        if pat.search(normalized):
             return {
                 "status": "NOT_DELIVERABLE",
-                "message": _first_matching_line(text, pat),
+                "message": _first_matching_line(text, pat) or normalized,
                 "estimatedDate": None,
             }
 
     for pat in _DELIVERY_POSITIVE:
-        if pat.search(text):
-            date_match = _DELIVERY_DATE_RE.search(text)
+        match = pat.search(normalized)
+        if match:
+            # Look for a date after the delivery phrase, not an unrelated sale date.
+            date_match = _DELIVERY_DATE_RE.search(normalized, match.end())
+            message = (
+                normalized[match.start():date_match.end()]
+                if date_match
+                else _first_matching_line(text, pat) or normalized
+            )
             return {
                 "status": "DELIVERABLE",
-                "message": _first_matching_line(text, pat),
+                "message": message,
                 "estimatedDate": date_match.group(1) if date_match else None,
             }
 
