@@ -11,6 +11,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
+from urllib.parse import unquote, urlsplit
 
 from playwright.async_api import (
     Browser,
@@ -59,6 +60,7 @@ class BrowserManager:
                     "args": [
                         "--no-sandbox",
                         "--disable-dev-shm-usage",
+                        "--disable-gpu",
                         "--disable-blink-features=AutomationControlled",
                     ],
                 }
@@ -81,11 +83,21 @@ class BrowserManager:
         """
         async with self._get_semaphore():
             browser = await self._ensure_started()
+            proxy = None
+            if settings.proxy_url:
+                parsed = urlsplit(settings.proxy_url)
+                port = parsed.port or (443 if parsed.scheme == "https" else 80)
+                proxy = {"server": f"{parsed.scheme}://{parsed.hostname}:{port}"}
+                if parsed.username:
+                    proxy["username"] = unquote(parsed.username)
+                    proxy["password"] = unquote(parsed.password or "")
             context = await browser.new_context(
+                proxy=proxy,
                 user_agent=settings.user_agent,
+                locale="en-IN",
+                timezone_id="Asia/Kolkata",
                 viewport={"width": 1280, "height": 800},
                 java_script_enabled=True,
-                ignore_https_errors=True,
                 extra_http_headers={
                     "Accept-Language": "en-IN,en;q=0.9",
                     "Accept": (

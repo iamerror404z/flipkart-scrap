@@ -11,6 +11,7 @@ from playwright.async_api import ElementHandle, Locator, Page, TimeoutError as P
 from app.config import get_settings
 from app.services.browser import browser_manager
 from app.utils.parser import extract_delivery_info
+from app.services.upstream import page_error
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +31,59 @@ _LEGACY_DELIVERY_SELECTORS = (
 )
 
 
-def _unknown(message: str) -> dict:
-    return {"status": "UNKNOWN", "message": message, "estimatedDate": None}
+def _unknown(message: str, error_code: str = "PARSE_ERROR") -> dict:
+    return {"status": "UNKNOWN", "message": message, "estimatedDate": None,
+            "errorCode": error_code}
+
+
+async def _wait_for_page_change(page: Page, timeout: int) -> None:
+    """Wait for DOM/navigation progress within the caller's bounded budget."""
+    state = await page.evaluate("() => [location.href, document.body?.innerText]")
+    try:
+        await page.wait_for_function(
+            "([url, text]) => location.href !== url || document.body?.innerText !== text",
+            arg=state, timeout=max(1, timeout),
+        )
+    except PlaywrightTimeoutError:
+        pass
+
+
+async def _reselect_map_pin(page: Page, pincode: str, timeout: int) -> bool:
+    # Guest /contacts returns 401 and can overwrite successful geocoding.
+    # Searching again inside the existing map does not reload saved contacts.
+    search = page.locator("input[placeholder*='Search by area']:visible").first
+    if not await search.count():
+        return False
+    logger.info("Recovering the guest map by reselecting PIN %s", pincode)
+    await search.fill("")
+    await search.fill(pincode)
+    suggestion = page.get_by_text(re.compile(rf"\b{re.escape(pincode)}\b")).filter(visible=True).last
+    try:
+        await suggestion.wait_for(state="visible", timeout=timeout)
+        await suggestion.click(timeout=timeout)
+    except PlaywrightTimeoutError:
+        return False
+    return await _confirm_map_location(page, pincode, timeout)
+
 
 
 async def _delivery_section(page: Page) -> Locator | None:
+    try:
+        return await _find_delivery_section(page)
+    except PlaywrightTimeoutError:
+        # The SPA can remove the heading between locating it and reading its
+        # parent during map navigation. Recheck the current page on the next pass.
+        return None
+
+
+async def _find_delivery_section(page: Page) -> Locator | None:
     """Find a small delivery block without including exchange/bank offers."""
     heading = page.get_by_text("Delivery details", exact=True).first
     if await heading.count() and await heading.is_visible():
         section = heading
         for _ in range(4):
             section = section.locator("..")
-            text = await section.inner_text()
+            text = await section.inner_text(timeout=300)
             if len(text) > 2500 or re.search(r"exchange\s+offer|bank\s+offers", text, re.I):
                 break
             if re.search(
@@ -55,7 +97,7 @@ async def _delivery_section(page: Page) -> Locator | None:
     for selector in _LEGACY_DELIVERY_SELECTORS:
         section = page.locator(selector + ":visible").first
         if await section.count():
-            text = await section.inner_text()
+            text = await section.inner_text(timeout=300)
             if len(text) < 2500 and not re.search(r"exchange\s+offer|bank\s+offers", text, re.I):
                 return section
     return None
@@ -70,7 +112,7 @@ async def _open_pin_input(page: Page, timeout: int) -> Locator | None:
             return pin
         section = await _delivery_section(page)
         if section is None:
-            await page.wait_for_timeout(min(500, timeout))
+            await _wait_for_page_change(page, min(500, timeout))
             continue
         entry = section.get_by_text(
             re.compile(r"^(?:Select|Change) delivery location$|^Change$", re.I)
@@ -128,13 +170,16 @@ async def _select_search_location(page: Page, pin: Locator, pincode: str, timeou
     while asyncio.get_running_loop().time() < deadline:
         if "address-map" in urlparse(page.url).path:
             await page.wait_for_load_state("domcontentloaded", timeout=navigation_timeout)
-            return await _confirm_map_location(page, pincode, navigation_timeout)
+            confirmed = await _confirm_map_location(page, pincode, navigation_timeout)
+            if confirmed:
+                return True
+            return await _reselect_map_pin(page, pincode, navigation_timeout)
         section = await _delivery_section(page)
         if section is not None and re.search(
             rf"\b{re.escape(pincode)}\b", await section.inner_text()
         ):
             return True
-        await page.wait_for_timeout(min(250, timeout))
+        await _wait_for_page_change(page, min(250, timeout))
     return False
 
 
@@ -186,7 +231,7 @@ async def _confirm_map_location(page: Page, pincode: str, timeout: int) -> bool:
                             timeout=max(1, int((deadline - asyncio.get_running_loop().time()) * 1000)),
                         )
                         return True
-        await page.wait_for_timeout(min(250, remaining))
+        await _wait_for_page_change(page, min(250, remaining))
     return False
 
 
@@ -214,7 +259,7 @@ async def _wait_delivery_result(
     while asyncio.get_running_loop().time() < deadline:
         section = await _delivery_section(page)
         if section is not None:
-            text = await section.inner_text()
+            text = await section.inner_text(timeout=300)
             # Current pages show the street address without its PIN after map
             # confirmation. Preserve that prior verification in this context.
             confirmed = (location_confirmed or bool(pin_pattern.search(text))) and not re.search(
@@ -234,7 +279,7 @@ async def _wait_delivery_result(
                 result = extract_delivery_info(text)
                 if result["status"] != "UNKNOWN":
                     return result
-        await page.wait_for_timeout(min(250, timeout))
+        await _wait_for_page_change(page, min(250, timeout))
     if confirmed:
         return _unknown("The PIN was applied, but no delivery result could be read.")
     return _unknown(f"Could not confirm delivery for PIN {pincode}.")
@@ -254,10 +299,10 @@ async def check_delivery(url: str, pincode: str) -> dict:
                 if route.request.resource_type in ("image", "font", "media")
                 else route.continue_(),
             )
-            await page.goto(url, wait_until="domcontentloaded", timeout=settings.playwright_timeout)
-            body = (await page.inner_text("body")).lower()
-            if any(word in body for word in ("captcha", "verify you are human", "access denied")):
-                return _unknown("CAPTCHA or bot-verification page encountered.")
+            response = await page.goto(url, wait_until="domcontentloaded", timeout=settings.playwright_timeout)
+            error = page_error(await page.content(), response.status if response else 200)
+            if error:
+                return _unknown(error[1], error[0])
 
             pin = await _open_pin_input(page, timeout)
             if pin is None:
@@ -284,7 +329,7 @@ async def check_delivery(url: str, pincode: str) -> dict:
             )
     except (PlaywrightTimeoutError, asyncio.TimeoutError) as exc:
         logger.warning("Delivery check timed out for PIN %s: %s", pincode, exc)
-        return _unknown(f"Timed out while confirming delivery for PIN {pincode}.")
+        return _unknown(f"Timed out while confirming delivery for PIN {pincode}.", "TIMEOUT")
     except Exception:
         logger.exception("Delivery check failed for PIN %s", pincode)
-        return _unknown("Browser error while checking delivery.")
+        return _unknown("Browser error while checking delivery; verify Chromium installation and proxy settings.", "BROWSER_ERROR")

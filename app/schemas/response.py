@@ -74,10 +74,13 @@ class ProductCheckResponse(BaseModel):
 
 class BatchResultItem(BaseModel):
     productUrl: str
+    product: ProductInfo | None = None
     isStock: bool | None = None
     isDeliverable: bool | None = None
     stockStatus: StockStatus = StockStatus.UNKNOWN
     deliveryStatus: DeliveryStatus = DeliveryStatus.UNKNOWN
+    deliveryMessage: str | None = None
+    estimatedDelivery: str | None = None
     error: ErrorDetail | None = None
 
 

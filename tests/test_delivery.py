@@ -326,3 +326,25 @@ async def test_map_recovers_when_confirm_is_replaced_by_error(browser_context, t
     """)
     result = await delivery.check_delivery(url, "638003")
     assert result["status"] == "DELIVERABLE"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('suggested_pin,expected', [('638003', 'DELIVERABLE'), ('638004', 'UNKNOWN')])
+async def test_guest_map_error_recovers_by_reselecting_exact_pin(browser_context, tmp_path, suggested_pin, expected):
+    url = map_search_page(tmp_path, """
+        <input placeholder="Search by area, name, street." oninput="
+            document.getElementById('result').hidden = this.value.length !== 6;">
+        <div id="result" hidden onclick="
+            document.getElementById('error').hidden = true;
+            this.hidden = true;
+            document.getElementById('ready').hidden = false;">Tamil Nadu PIN India</div>
+        <div id="error">Unable to pin your location now
+            <button onclick="window.retries++">Try Again</button></div>
+        <div id="ready" hidden><div>Erode PIN</div>
+            <button onclick="sessionStorage.setItem('confirmedPin', 'PIN');
+                window.location.href = window.productUri;">Confirm</button></div>
+    """.replace('PIN', suggested_pin))
+    result = await delivery.check_delivery(url, '638003')
+    assert result['status'] == expected
+    if expected == 'UNKNOWN':
+        assert await browser_context.pages[0].evaluate("sessionStorage.getItem('confirmedPin')") is None

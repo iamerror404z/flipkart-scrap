@@ -101,17 +101,20 @@ async def batch_check(body: BatchCheckRequest) -> BatchCheckResponse:
             avail = result.availability
             return BatchResultItem(
                 productUrl=product_url,
+                product=result.product,
                 isStock=avail.isStock,
                 isDeliverable=avail.isDeliverable,
                 stockStatus=avail.stockStatus,
                 deliveryStatus=avail.deliveryStatus,
+                deliveryMessage=avail.deliveryMessage,
+                estimatedDelivery=avail.estimatedDelivery,
             )
 
     tasks = [_check_one(item.productUrl) for item in body.products]
     results = await asyncio.gather(*tasks)
 
     return BatchCheckResponse(
-        success=True,
+        success=all(item.error is None for item in results),
         pincode=body.pincode,
         totalProducts=len(results),
         results=list(results),

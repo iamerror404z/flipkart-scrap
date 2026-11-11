@@ -93,10 +93,19 @@ async def scrape_product(product_url: str, pincode: str) -> ScraperResult:
         soup = BeautifulSoup(html, "html.parser")
         _extract_product_info(soup, html, product_url, result)
 
+        if not result.product.name or result.product.price is None:
+            result.error_code = "PARSE_ERROR"
+            result.error_message = "Could not extract the product name and price from Flipkart."
+            return result
         stock_status = _determine_stock_status(soup, html, result)
 
         # Always use Playwright for PIN-code delivery check
         delivery = await _check_delivery_playwright(product_url, pincode)
+
+        if delivery.get("errorCode"):
+            result.error_code = delivery["errorCode"]
+            result.error_message = delivery["message"]
+            return result
 
         result.availability = build_availability(
             stock_status=stock_status,
@@ -111,7 +120,7 @@ async def scrape_product(product_url: str, pincode: str) -> ScraperResult:
     except Exception as exc:
         logger.exception("Unexpected error scraping %s", product_url)
         result.error_code = "SCRAPE_ERROR"
-        result.error_message = f"An unexpected error occurred: {exc}"
+        result.error_message = "An unexpected error occurred while scraping Flipkart; check the service logs."
 
     return result
 

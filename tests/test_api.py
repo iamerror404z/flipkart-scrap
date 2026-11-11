@@ -267,6 +267,9 @@ class TestBatchCheck:
         assert data["success"] is True
         assert data["totalProducts"] == 2
         assert len(data["results"]) == 2
+        assert data["results"][0]["product"]["name"] == "Test Phone"
+        assert data["results"][0]["deliveryMessage"] == "Delivery by 15 Nov"
+        assert data["results"][0]["estimatedDelivery"] == "15 Nov"
 
     @patch("app.api.routes.scrape_product", new_callable=AsyncMock)
     def test_batch_mixed_results(self, mock_scrape, client):
@@ -289,6 +292,7 @@ class TestBatchCheck:
         results = data["results"]
         assert results[0]["stockStatus"] == "IN_STOCK"
         assert results[1]["error"]["code"] == "PRODUCT_NOT_FOUND"
+        assert data["success"] is False
 
     def test_batch_invalid_pincode(self, client):
         resp = client.post(

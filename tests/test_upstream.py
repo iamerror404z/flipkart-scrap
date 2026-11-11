@@ -41,3 +41,16 @@ async def test_blocked_is_not_retried():
         assert await scraper._fetch_html('https://www.flipkart.com/', result) is None
     assert result.error_code == 'BLOCKED'
     assert get.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_delivery_failure_is_propagated():
+    html = '<script type="application/ld+json">{"@type":"Product","name":"Phone","offers":{"price":"100","availability":"InStock"}}</script>'
+    with patch.object(scraper, '_fetch_html', AsyncMock(return_value=html)), patch.object(
+        scraper, '_check_delivery_playwright', AsyncMock(return_value={
+            'status': 'UNKNOWN', 'message': 'Browser timed out', 'errorCode': 'TIMEOUT'
+        })
+    ):
+        result = await scraper.scrape_product('https://www.flipkart.com/phone/p/itm123', '638003')
+    assert not result.success
+    assert result.error_code == 'TIMEOUT'

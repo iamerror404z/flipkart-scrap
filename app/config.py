@@ -53,7 +53,7 @@ class Settings(BaseSettings):
 
     @property
     def proxy_url(self) -> str | None:
-        return self.flipkart_proxy.get_secret_value() if self.flipkart_proxy else None
+        return (self.flipkart_proxy.get_secret_value() or None) if self.flipkart_proxy else None
 
 
 @lru_cache(maxsize=1)
